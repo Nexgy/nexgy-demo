@@ -1,0 +1,68 @@
+---
+- name: Configure and install Samba ad
+  hosts: BR-SRV
+  become: no
+  vars:
+    users_csv_content: |
+      username,password
+      user1.hq,P@ssw0rd
+      user2.hq,P@ssw0rd
+      user3.hq,P@ssw0rd
+      user4.hq,P@ssw0rd
+      user5.hq,P@ssw0rd
+
+  tasks:
+    - name: Update packeges
+      command: apt-get update -y
+
+    - name: Install packeges
+      command: apt-get install -y task-samba-ad
+
+    - name: Create file users.csv
+      copy:
+        content: "{{ users_csv_content }}"
+        dest: /opt/users.csv
+        mode: '0644'
+
+    - name: Configure Samba ad
+      command: >
+        samba-tool domain provision
+        --use-rfc2307 --domain=AU-TEAM
+        --realm=AU-TEAM.IRPO
+        --adminpass=P@ssw0rd
+        --host-name=BR-SRV
+
+    - name: Enable samba service
+      service:
+        name: samba
+        state: started
+        enabled: yes
+
+    - name: Create group hq
+      command: samba-tool group add hq
+
+    - name: Import users into file users.csv
+      command: >
+        while IFS=',' read -r username password; do
+        if ["$username" != "username"];
+        then
+        samba-tool user add
+        "{{ username }}" "{{ password }}"
+        --given-name="$username"
+        --surname="AUuser" && samba-tool group addmembers hq "{{ username }}"
+        fi
+        done < /opt/users.csv
+      args:
+        executable: /bin/bash
+
+   - name: Configure permission for group users hq
+     lineinfile:
+       path: /etc/sudoers
+       line: '%hq ALL=(ALL) NOPASSWD: /bin/cat, /bin/grep, /usr/bin/id'
+       validate: visudo -cf %s
+
+   - name: Commit CLI in domain
+     command: >
+     samba-tool computer add HQ-CLI 
+     --ip-address=192.168.200.10 
+     --password=P@ssw0rd

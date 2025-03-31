@@ -1,0 +1,40 @@
+---
+- name: Configure port forwarding
+  hosts:
+    - BR-RTR
+    - HQ-RTR
+  become: yes
+  tasks:
+    - name: Port forwarding from 80 to 8080
+      command: >
+        iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 192.168.0.10:8080
+      when: inventory_hostname == 'BR-RTR'
+      ignore_errors: yes
+
+    - name: Port forwarding from 22 to 2024
+      command: >
+        iptables -t nat -A PREROUTING -p tcp --dport 22 -j DNAT --to-destination 192.168.100.10:2024
+      when: inventory_hostname == 'HQ-RTR'
+      ignore_errors: yes
+
+    - name: Port forwarding from 22 to 2024
+      command: >
+        iptables -t nat -A PREROUTING -p tcp --dport 2024 -j DNAT --to-destination 192.168.0.10:2024
+      when: inventory_hostname == 'BR-RTR'
+      ignore_errors: yes
+
+    - name: Access traffic BR-RTR
+      command: >
+        iptables -A FORWARD -p tcp -d 192.168.0.10 --dport 80 -j ACCEPT
+      when: inventory_hostname == 'BR-RTR'
+      ignore_errors: yes
+
+    - name: Access traffic HQ-RTR
+      command: >
+        iptables -A FORWARD -p tcp -d 192.168.100.10 --dport 2024 -j ACCEPT
+      when: inventory_hostname == 'HQ-RTR'
+      ignore_errors: yes
+
+    - name: Save rules iptables
+      command: >
+        iptables-save > /etc/iptables/rules.v4

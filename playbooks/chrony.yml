@@ -1,0 +1,64 @@
+---
+- name: Configure Chrony in HQ-RTR
+  hosts: HQ-RTR
+  become: no
+  tasks:
+    - name: Установка пакетов chrony
+      command: apt-get install -y chrony
+
+    - name: Configure chrony server
+      blockinfile:
+        path: /etc/chrony/chrony.conf
+        block: |
+          server 127.0.0.1 iburst
+          local stratum 5
+      notify: Restart chrony
+
+    - name: Configure ethernet 100
+      lineinfile:
+        path: /etc/chrony/chrony.conf
+        line: "allow 192.168.100.0/28"
+        state: present
+      notify: Restart chrony
+
+    - name: Configure ethernet 200
+      lineinfile:
+        path: /etc/chrony/chrony.conf
+        line: "allow 192.168.200.0/28"
+        state: present
+      notify: Restart chrony
+
+    - name: Enable and start Chrony service
+      systemd:
+        name: chrony
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: Restart chrony
+      service:
+        name: chrony
+        state: restarted
+
+- name: Configure Chrony in clients
+  hosts:
+    - HQ-SRV
+    - HQ-CLI
+    - BR-RTR
+    - BR-SRV
+  become: no
+  tasks:
+    - name: Download chrony
+      command: apt-get install -y chrony
+
+    - name: Configure Chrony client
+      lineinfile:
+        path: /etc/chrony/chrony.conf
+        line: "server 192.168.100.1 iburst"
+        state: present
+
+    - name: Enable Chrony
+      systemd:
+        name: chrony
+        enabled: yes
+        state: started

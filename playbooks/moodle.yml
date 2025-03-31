@@ -1,0 +1,87 @@
+---
+- name: Download and configure Moodle
+  hosts: HQ-SRV
+  become: no
+  tasks:
+    - name: Download packeges
+      command: apt-get install -y moodle moodle-apache2 moodle-local-mysql php8.1 php8.1-mysqli php8.1-xml php8.1-mbstring mariadb-server
+
+    - name: Enable and start MariaDB
+      systemd:
+        name: mariadb
+        enabled: yes
+        state: started
+
+    - name: Enable script mysql_secure_installation
+      command: mysql_secure_installation
+      args:
+        stdin: "Y\ntoor\nY\nY\nY\nY\n"
+
+    - name: Create database
+      mysql_db:
+        name: moodledb
+        state: present
+
+    - name: Create user moodle
+      mysql_user:
+        name: moodle
+        password: P@ssw0rd
+        host: localhost
+        privileges: "ALL"
+        database: moodledb
+        state: present
+
+    - name: Copy configure file Moodle
+      copy:
+        src: /var/www/webapps/moodle/config-dist.php
+        dest: /var/www/webapps/moodle/config.php
+        remote_src: yes
+
+    - name: Configure config.php for Moodle
+      lineinfile:
+        path: /var/www/webapps/moodle/config.php
+        regexp: '^$CFG->db'
+        line: |
+          $CFG->dbtype    = 'mariadb';
+          $CFG->dblibrary = 'native';
+          $CFG->dbhost    = 'localhost';
+          $CFG->dbname    = 'moodledb';
+          $CFG->dbuser    = 'moodle';
+          $CFG->dbpass    = 'P@ssw0rd';
+          $CFG->prefix    = 'mdl_';
+          $CFG->wwwroot   = 'http://{{ ansible_hostname }}/moodle';
+          $CFG->dataroot  = '/var/moodledata';
+          $CFG->admin     = 'admin';
+          $CFG->password  = 'P@ssw0rd';
+          $CFG->directorypermissions = 0777;
+
+    - name: Create directory data Moodle
+      file:
+        path: /var/moodledata
+        state: directory
+        owner: apache
+        group: apache
+        mode: '0777'
+
+    - name: Enable module rewrite for Apache
+      command: a2enmod rewrite
+      notify: Restart Apache
+    
+    - name: Change max_input_vars in php.ini
+      lineinfile:
+        path: /etc/php/8.1/apache2/php.ini
+        regexp: '^max_input_vars'
+        line: 'max_input_vars = 5000'
+        
+    - name: Restart Apache
+      systemd:
+        name: apache2
+        state: restarted
+        enabled: yes
+        immediate: yes
+
+  handlers:
+    - name: Restart Apache
+      systemd:
+        name: apache2
+        state: restarted

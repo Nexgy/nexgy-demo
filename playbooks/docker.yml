@@ -1,0 +1,65 @@
+---
+- name: Docker Mediawiki site
+  hosts: BR-SRV
+  become: no
+  tasks:
+    - name: Download Docker and Docker Compose
+      command: apt-get install -y docker-io docker-compose
+
+    - name: Cheate file docker-compose.yml
+      copy:
+        dest: ~/wiki.yml
+        content: |
+          version: '3.7'
+          services:
+            wiki:
+              image: mediawiki
+              container_name: wiki
+              ports:
+                - "8080:80"
+              volumes:
+                - ~/LocalSettings.php:/var/www/html/LocalSettings.php
+              environment:
+                - MEDIAWIKI_DB_SERVER=mariadb
+                - MEDIAWIKI_DB_USER=wiki
+                - MEDIAWIKI_DB_PASSWORD=WikiP@ssw0rd
+                - MEDIAWIKI_DB_NAME=mediawiki
+              depends_on:
+                - mariadb
+
+            mariadb:
+              image: mariadb
+              container_name: mariadb
+              environment:
+                - MYSQL_ROOT_PASSWORD=somepassword
+                - MYSQL_DATABASE=mediawiki
+                - MYSQL_USER=wiki
+                - MYSQL_PASSWORD=WikiP@ssw0rd
+              volumes:
+                - mariadb_data:/var/lib/mysql
+
+          volumes:
+            mariadb_data:
+
+    - name: Create file LocalSettings.php
+      copy:
+        dest: ~/LocalSettings.php
+        content: |
+          <?php
+          $wgDBtype = "mysql";
+          $wgDBserver = "mariadb";
+          $wgDBname = "mediawiki";
+          $wgDBuser = "wiki";
+          $wgDBpassword = "WikiP@ssw0rd";
+          $wgSitename = "My Wiki";
+          $wgScriptPath = "";
+          $wgShowIPinHeader = true;
+          $wgEnableUserEmail = true;
+          $wgEnableEmail = true;
+          $wgFavicon = "https://www.mediawiki.org/w/favicon.ico";
+          $wgUseInstantCommons = true;
+
+    - name: Enable containers for Docker Compose
+      command: docker-compose -f ~/wiki.yml up -d
+      args:
+        chdir: ~/

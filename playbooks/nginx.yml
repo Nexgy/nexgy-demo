@@ -1,0 +1,53 @@
+---
+- name: Configure Nginx how reverce proxy HQ-RTR
+  hosts: HQ-RTR
+  become: yes
+  tasks:
+    - name: Download Nginx
+      command: apt-get install -y nginx
+
+    - name: Configuration Nginx for Moodle
+      copy:
+        dest: /etc/nginx/sites-available/moodle.conf
+        content: |
+          server {
+              listen 80;
+              server_name moodle.au-team.irpo;
+
+              location / {
+                  proxy_pass http://HQ-SRV:80;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+          }
+
+    - name: Create configuration Nginx for MediaWiki
+      copy:
+        dest: /etc/nginx/sites-available/wiki.conf
+        content: |
+          server {
+              listen 80;
+              server_name wiki.au-team.irpo;
+
+              location / {
+                  proxy_pass http://BR-SRV:80;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+          }
+
+    - name: Enable configuration
+      command: nginx -s reload
+
+    - name: Copy configurations
+      command: ln -s /etc/nginx/sites-available/{{ item }} /etc/nginx/sites-enabled/
+      loop:
+        - moodle.conf
+        - wiki.conf
+
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: restarted

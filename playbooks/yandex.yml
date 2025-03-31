@@ -1,0 +1,7 @@
+---
+- name: Download yandex browser in HQ-CLI
+  hosts: HQ-CLI
+  become: yes
+  tasks:
+    - name: Download packeges
+      command: apt-get install -y yandex-browser-stable
