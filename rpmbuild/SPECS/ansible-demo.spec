@@ -3,6 +3,7 @@ Version: 0.1
 Release: 1%{?dist}
 Summary: Utility for running Ansible playbooks
 License: MIT
+Group: Applications/System
 Source0: ansible-demo-0.1.tar.gz
 BuildRequires: python3-setuptools ansible
 
