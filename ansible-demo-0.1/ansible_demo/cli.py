@@ -1,15 +1,18 @@
 import subprocess
 import sys
+import os
+
+PLAYBOOKS_DIR = '/usr/share/ansible_playbooks'
 
 playbooks = {
-    "samba": "playbooks/samba.yml",
-    "nfs": "playbooks/nfs.yml",
-    "chrony": "playbooks/chrony.yml",
-    "docker": "playbooks/docker.yml",
-    "iptables": "playbooks/iptables.yml",
-    "moodle": "playbooks/moodle.yml",
-    "nginx": "playbooks/nginx.yml",
-    "yandex": "playbooks/yandex.yml",
+    "samba": os.path.join(PLAYBOOKS_DIR, "samba.yml"),
+    "nfs": os.path.join(PLAYBOOKS_DIR, "nfs.yml"),
+    "chrony": os.path.join(PLAYBOOKS_DIR, "chrony.yml"),
+    "docker": os.path.join(PLAYBOOKS_DIR, "docker.yml"),
+    "iptables": os.path.join(PLAYBOOKS_DIR, "iptables.yml"),
+    "moodle": os.path.join(PLAYBOOKS_DIR, "moodle.yml"),
+    "nginx": os.path.join(PLAYBOOKS_DIR, "nginx.yml"),
+    "yandex": os.path.join(PLAYBOOKS_DIR, "yandex.yml"),
 }
 
 def run_playbook(playbook):
