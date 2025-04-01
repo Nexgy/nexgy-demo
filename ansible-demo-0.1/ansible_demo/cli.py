@@ -2,7 +2,6 @@ import subprocess
 import sys
 import os
 
-# Убедитесь, что путь указан правильно
 PLAYBOOKS_DIR = '/usr/share/ansible_playbooks'
 
 playbooks = {
@@ -19,14 +18,20 @@ playbooks = {
 def run_playbook(playbook):
     if playbook in playbooks:
         playbook_path = playbooks[playbook]
-        print(f"Running playbook: {playbook_path}...")
-        
+        print(f"Trying to run playbook at path: {playbook_path}")
+
+        if not os.path.exists(playbook_path):
+            print(f"Playbook file does NOT exist at: {playbook_path}")
+            sys.exit(1)
+
         inventory_file = '/root/hosts'
+        print(f"Using inventory file: {inventory_file}")
+
         result = subprocess.run(['ansible-playbook', '-i', inventory_file, playbook_path],
                                 capture_output=True, text=True)
-        
+
         print(result.stdout)
-        
+
         if result.returncode != 0:
             print(f"Error executing playbook: {result.stderr}")
             sys.exit(result.returncode)
@@ -38,6 +43,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: demo <playbook_name>")
         sys.exit(1)
+
     run_playbook(sys.argv[1])
 
 if __name__ == "__main__":
